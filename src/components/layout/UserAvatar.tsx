@@ -4,6 +4,7 @@ import { ChevronDown } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 interface UserAvatarProps {
@@ -65,17 +66,22 @@ export default function UserAvatar({ user, onLogout, showDashboard }: UserAvatar
           <div className="flex items-center gap-2 cursor-pointer">
             <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium overflow-hidden">
               {user.avatar ? (
-                <img 
-                  src={user.avatar} 
-                  alt={user.name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                    e.currentTarget.parentElement!.textContent = getInitials(user.name);
-                  }}
-                />
+                <div className="relative w-full h-full">
+                  <Image
+                    src={user.avatar}
+                    alt={user.name}
+                    fill
+                    className="object-cover"
+                    onError={() => {
+                      const element = document.getElementById(`avatar-${user.name}`);
+                      if (element) {
+                        element.textContent = getInitials(user.name);
+                      }
+                    }}
+                  />
+                </div>
               ) : (
-                getInitials(user.name)
+                <span id={`avatar-${user.name}`}>{getInitials(user.name)}</span>
               )}
             </div>
             <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />

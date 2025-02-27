@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowUpRight, ExternalLink, Trash2 } from "lucide-react";
+import { ExternalLink, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -48,7 +48,10 @@ export default function StoreCard({ tool, currentUserId, onDelete }: StoreCardPr
         setIsAdmin(tokenData.role === 'admin');
       } catch (error) {
         console.error('Error decoding token:', error);
+        setIsAdmin(false);
       }
+    } else {
+      setIsAdmin(false);
     }
   }, []);
 
@@ -144,10 +147,11 @@ export default function StoreCard({ tool, currentUserId, onDelete }: StoreCardPr
               <div className="flex items-start gap-4">
                 {/* Logo */}
                 <div className="relative w-14 h-14">
-                  <img
+                  <Image
                     src={tool.thumbnail}
                     alt={tool.title}
-                    className="w-full h-full rounded-[18px] object-cover shadow-sm group-hover:shadow-md transition-all duration-300"
+                    fill
+                    className="rounded-[18px] object-cover shadow-sm group-hover:shadow-md transition-all duration-300"
                   />
                 </div>
 
@@ -197,7 +201,7 @@ export default function StoreCard({ tool, currentUserId, onDelete }: StoreCardPr
           <DialogHeader>
             <DialogTitle>Delete Tool</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{tool.title}"? This action cannot be undone.
+              Are you sure you want to delete &quot;{tool.title}&quot;? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2 justify-end">

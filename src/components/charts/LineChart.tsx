@@ -3,7 +3,10 @@
 import { Line, LineChart as RechartsLineChart, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 interface LineChartProps {
-  data: any[];
+  data: Array<{
+    date: string;
+    [key: string]: string | number; // Allow dynamic category values
+  }>;
   categories: string[];
 }
 

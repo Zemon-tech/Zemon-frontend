@@ -9,6 +9,7 @@ import { useState, useEffect } from "react";
 import { API_BASE_URL } from "@/lib/api";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 interface NewsCardProps {
   news: {
@@ -101,10 +102,11 @@ export default function NewsCard({ news, onDelete }: NewsCardProps) {
       >
         {/* Image Container */}
         <div className="relative w-full h-[13rem] overflow-hidden">
-          <img
+          <Image
             src={news.image}
             alt={news.title}
-            className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+            fill
+            className="object-cover transform group-hover:scale-105 transition-transform duration-500"
           />
           
           {/* Category Badge */}

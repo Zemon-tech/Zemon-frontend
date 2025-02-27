@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Upload, X, Check, Loader2 } from "lucide-react";
+import { Upload } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import Image from "next/image";
 
 interface AvatarUploadProps {
   currentAvatar?: string;
@@ -11,34 +11,8 @@ interface AvatarUploadProps {
 }
 
 export default function AvatarUpload({ currentAvatar, onUpload }: AvatarUploadProps) {
-  const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
-
-  const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
-      await handleFileUpload(file);
-    } else {
-      toast({
-        title: "Invalid file",
-        description: "Please upload an image file",
-        variant: "destructive",
-      });
-    }
-  };
+  const previewUrl = currentAvatar;
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -48,7 +22,6 @@ export default function AvatarUpload({ currentAvatar, onUpload }: AvatarUploadPr
   };
 
   const handleFileUpload = async (file: File) => {
-    setIsUploading(true);
     try {
       // Simulate file upload - replace with actual upload logic
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -67,8 +40,6 @@ export default function AvatarUpload({ currentAvatar, onUpload }: AvatarUploadPr
         description: "Failed to upload profile picture",
         variant: "destructive",
       });
-    } finally {
-      setIsUploading(false);
     }
   };
 
@@ -82,38 +53,20 @@ export default function AvatarUpload({ currentAvatar, onUpload }: AvatarUploadPr
         id="avatar-upload"
       />
       
-      <motion.div
-        className={`relative w-24 h-24 rounded-full overflow-hidden border-4 ${
-          isDragging ? 'border-primary' : 'border-background'
-        } shadow-xl`}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        animate={{ scale: isDragging ? 1.05 : 1 }}
-      >
-        <img
-          src={currentAvatar || "/placeholder-avatar.jpg"}
-          alt="Profile"
-          className="w-full h-full object-cover"
-        />
-        
-        <AnimatePresence>
-          {(isDragging || isUploading) && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center"
-            >
-              {isUploading ? (
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              ) : (
-                <Upload className="w-6 h-6 text-primary" />
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
+      <div className="relative w-32 h-32 rounded-full overflow-hidden bg-primary/10">
+        {previewUrl ? (
+          <Image
+            src={previewUrl}
+            alt="Avatar preview"
+            fill
+            className="object-cover"
+          />
+        ) : (
+          <div className="flex items-center justify-center w-full h-full">
+            <Upload className="w-8 h-8 text-muted-foreground" />
+          </div>
+        )}
+      </div>
 
       <label
         htmlFor="avatar-upload"

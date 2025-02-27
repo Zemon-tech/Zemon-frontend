@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -16,27 +16,34 @@ import { API_BASE_URL } from "@/lib/api";
 interface NewsArticle {
   _id: string;
   title: string;
-  content: string;
-  excerpt: string;
   category: string;
-  image: string;
-  tags: string[];
   createdAt: string;
+  image: string;
+  excerpt: string;
   views: number;
-  likes: string[];
+}
+
+interface MappedNewsArticle {
+  id: string;
+  title: string;
+  category: string;
+  date: string;
+  image: string;
+  excerpt: string;
+  views: number;
 }
 
 export default function NewsPage() {
   const router = useRouter();
   const [showAddForm, setShowAddForm] = useState(false);
-  const [news, setNews] = useState<NewsArticle[]>([]);
+  const [news, setNews] = useState<MappedNewsArticle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [isAdmin, setIsAdmin] = useState(false);
   const { toast } = useToast();
 
-  const filterOptions = [
+  const categories = [
     { label: "All Categories", value: "all" },
     { label: "Framework Updates", value: "Framework Updates" },
     { label: "Security", value: "Security" },
@@ -44,7 +51,7 @@ export default function NewsPage() {
     { label: "Tutorials", value: "Tutorials" },
   ];
 
-  const fetchNews = async () => {
+  const fetchNews = useCallback(async () => {
     try {
       setIsLoading(true);
       const token = localStorage.getItem('token');
@@ -55,20 +62,16 @@ export default function NewsPage() {
       });
       const data = await response.json();
       if (data.success) {
-        // Map the news data to match the expected format
-        const mappedNews = data.data.news.map((article: any) => ({
-          _id: article._id,
+        const mappedNews = data.data.news.map((article: NewsArticle) => ({
+          id: article._id,
           title: article.title,
-          content: article.content,
-          excerpt: article.excerpt,
           category: article.category,
-          image: article.image || '/placeholder-news.jpg',
-          tags: article.tags || [],
-          createdAt: article.createdAt,
-          views: article.views || 0,
-          likes: article.likes || []
+          date: new Date(article.createdAt).toLocaleDateString(),
+          image: article.image,
+          excerpt: article.excerpt,
+          views: article.views
         }));
-        setNews(mappedNews);
+        setNews(mappedNews as MappedNewsArticle[]);
       } else {
         throw new Error(data.message || 'Failed to fetch news');
       }
@@ -82,11 +85,11 @@ export default function NewsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchNews();
-  }, []);
+  }, [fetchNews]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -172,7 +175,7 @@ export default function NewsPage() {
   const filteredNews = news.filter(article => {
     const matchesSearch = searchQuery.toLowerCase() === '' || 
       article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      article.content.toLowerCase().includes(searchQuery.toLowerCase());
+      article.excerpt.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesCategory = selectedCategory === 'all' || article.category === selectedCategory;
     
@@ -199,13 +202,7 @@ export default function NewsPage() {
         onChange={setSearchQuery}
         filter={selectedCategory}
         onFilterChange={setSelectedCategory}
-        filterOptions={[
-          { label: "All Categories", value: "all" },
-          { label: "Framework Updates", value: "Framework Updates" },
-          { label: "Security", value: "Security" },
-          { label: "Community", value: "Community" },
-          { label: "Tutorials", value: "Tutorials" },
-        ]}
+        filterOptions={categories}
       />
 
       {/* News Articles Grid */}
@@ -217,13 +214,13 @@ export default function NewsPage() {
           ))
         ) : filteredNews.length > 0 ? (
           filteredNews.map((article) => (
-            <div key={article._id} onClick={() => router.push(`/news/${article._id}`)}>
+            <div key={article.id} onClick={() => router.push(`/news/${article.id}`)}>
               <NewsCard
                 news={{
-                  id: article._id,
+                  id: article.id,
                   title: article.title,
                   category: article.category || 'Uncategorized',
-                  date: new Date(article.createdAt).toLocaleDateString(),
+                  date: article.date,
                   image: article.image || '/placeholder-news.jpg',
                   excerpt: article.excerpt,
                   views: article.views

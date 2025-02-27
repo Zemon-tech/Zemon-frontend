@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Plus, GitBranch, Star, ArrowUpDown } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -55,33 +55,40 @@ export default function ReposPage() {
     { label: "Rust", value: "rust" },
   ];
 
-  const fetchRepos = async () => {
+  const fetchRepos = useCallback(async () => {
+    setIsLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/repos`, {
-        headers: {
-          'Authorization': token ? `Bearer ${token}` : '',
-          'Content-Type': 'application/json'
-        }
-      });
+      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/repos`;
+      if (searchValue) {
+        url += `?search=${searchValue}`;
+      }
+      if (filterValue) {
+        url += `${searchValue ? '&' : '?'}filter=${filterValue}`;
+      }
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error('Failed to fetch repositories');
+      }
 
       const data = await response.json();
       if (data.success) {
-        // The backend now provides properly transformed data
         setOriginalRepos(data.data.repos);
         setRepos(data.data.repos);
+      } else {
+        throw new Error(data.message || 'Failed to fetch repositories');
       }
     } catch (error) {
-      console.error('Error fetching repositories:', error);
+      console.error('Error fetching repos:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch repositories",
+        description: error instanceof Error ? error.message : "Failed to fetch repositories",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [searchValue, filterValue, toast]);
 
   useEffect(() => {
     fetchRepos();
@@ -116,7 +123,7 @@ export default function ReposPage() {
         setCurrentUserId(null);
       }
     }
-  }, []);
+  }, [fetchRepos]);
 
   const handleSubmitProject = async (formData: FormData) => {
     try {
@@ -176,7 +183,7 @@ export default function ReposPage() {
     router.push(`/repos/${repoId}`);
   };
 
-  const handleGitHubClick = (e: React.MouseEvent<HTMLAnchorElement>, url: string) => {
+  const handleGitHubClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation(); // Prevent card click when clicking GitHub link
   };
 
@@ -264,26 +271,9 @@ export default function ReposPage() {
       {/* Repositories Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
         {isLoading ? (
-          // Loading skeleton
-          Array.from({ length: 6 }).map((_, i) => (
-            <div key={`skeleton-${i}`} className="p-6 rounded-lg border bg-card animate-pulse">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="h-10 w-10 bg-muted rounded"></div>
-                <div className="flex-1">
-                  <div className="h-5 bg-muted rounded w-3/4 mb-2"></div>
-                  <div className="h-4 bg-muted rounded w-1/2"></div>
-                </div>
-              </div>
-              <div className="h-4 bg-muted rounded w-full mb-4"></div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="h-4 bg-muted rounded w-16"></div>
-                  <div className="h-4 bg-muted rounded w-16"></div>
-                  <div className="h-4 bg-muted rounded w-16"></div>
-                </div>
-                <div className="h-3 w-3 bg-muted rounded-full"></div>
-              </div>
-            </div>
+          // Loading skeletons
+          Array(6).fill(0).map((_, i) => (
+            <div key={i} className="bg-card animate-pulse rounded-lg p-4 h-64" />
           ))
         ) : repos.length > 0 ? (
           repos.map((repo) => (
@@ -292,17 +282,16 @@ export default function ReposPage() {
               id={repo._id}
               name={repo.name}
               description={repo.description}
-              stars={repo.stars}
-              forks={repo.forks}
               language={repo.language}
-              githubUrl={repo.github_url}
-              updatedAt={repo.updatedAt || repo.createdAt}
-              creator={{ 
-                name: repo.added_by?.name,
-                id: repo.added_by?._id
+              updatedAt={repo.updatedAt}
+              creator={{
+                name: repo.added_by.name,
+                id: repo.added_by._id
               }}
               currentUserId={currentUserId}
-              onDelete={fetchRepos}
+              onDelete={async () => {
+                await fetchRepos();
+              }}
               onGitHubClick={(e) => {
                 e.preventDefault();
                 window.open(repo.github_url, '_blank');

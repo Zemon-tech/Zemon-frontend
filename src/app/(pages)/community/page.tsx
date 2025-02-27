@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Plus, Search, Filter, Lightbulb, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -68,13 +68,13 @@ export default function CommunityPage() {
     }
   };
 
-  const fetchIdeas = async () => {
+  const fetchIdeas = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
       const response = await axios.get('http://localhost:5002/api/community/ideas');
       setIdeas(response.data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching ideas:', error);
       setError('Failed to load ideas. Please try again later.');
       toast({
@@ -85,7 +85,7 @@ export default function CommunityPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
 
   const fetchResources = () => {
     setActiveTab("resources");
@@ -93,16 +93,12 @@ export default function CommunityPage() {
 
   useEffect(() => {
     fetchIdeas();
-  }, []);
+  }, [fetchIdeas]);
 
   const filteredIdeas = ideas.filter(idea =>
     idea.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     idea.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  const handleIdeaRefresh = async () => {
-    await fetchIdeas(); // Re-fetch all ideas to get the updated comments
-  };
 
   const handleCommentClick = (idea: Idea) => {
     setActiveComments({
@@ -188,7 +184,6 @@ export default function CommunityPage() {
                         createdAt: idea.createdAt,
                       }}
                       onDelete={fetchIdeas}
-                      onRefresh={fetchIdeas}
                       onCommentClick={() => handleCommentClick(idea)}
                     />
                   </motion.div>

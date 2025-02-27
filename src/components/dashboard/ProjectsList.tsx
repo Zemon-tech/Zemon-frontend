@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Star, GitBranch, Eye } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
+import Image from "next/image";
 
 interface Project {
   _id: string;
@@ -16,6 +17,7 @@ interface Project {
   forks: number;
   watchers: number;
   thumbnail_url?: string;
+  image?: string;
 }
 
 export default function ProjectsList() {
@@ -23,35 +25,35 @@ export default function ProjectsList() {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/projects`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
+  const fetchProjects = useCallback(async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/projects`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch projects');
-        }
-
-        const data = await response.json();
-        setProjects(data.data);
-      } catch (error) {
-        console.error('Error fetching projects:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load projects",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
+      if (!response.ok) {
+        throw new Error('Failed to fetch projects');
       }
-    };
 
-    fetchProjects();
+      const data = await response.json();
+      setProjects(data.data);
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load projects",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }, [toast]);
+
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
 
   if (isLoading) {
     return (
@@ -95,13 +97,14 @@ export default function ProjectsList() {
                     {project.description}
                   </p>
                 </div>
-                {project.thumbnail_url && (
-                  <img
-                    src={project.thumbnail_url}
+                <div className="relative w-12 h-12 rounded-lg overflow-hidden">
+                  <Image
+                    src={project.image || "/placeholder-project.jpg"}
                     alt={project.name}
-                    className="w-12 h-12 rounded object-cover"
+                    fill
+                    className="object-cover"
                   />
-                )}
+                </div>
               </div>
 
               <div className="flex items-center gap-4 text-sm text-muted-foreground">

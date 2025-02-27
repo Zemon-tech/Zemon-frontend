@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Plus } from "lucide-react";
 import StoreCard from "@/components/store/StoreCard";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
@@ -71,11 +71,7 @@ export default function StorePage() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchStoreItems();
-  }, []);
-
-  const fetchStoreItems = async () => {
+  const fetchStoreItems = useCallback(async () => {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/store`);
       const data = await response.json();
@@ -88,13 +84,15 @@ export default function StorePage() {
       console.error('Error fetching store items:', error);
       toast({
         title: "Error",
-        description: "Failed to load store items",
+        description: error instanceof Error ? error.message : "Failed to fetch store items",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchStoreItems();
+  }, [fetchStoreItems]);
 
   const handleSubmitTool = async (formData: FormData) => {
     try {
@@ -219,10 +217,18 @@ export default function StorePage() {
 
       <div className="space-y-6">
         <SearchAndFilter
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          selectedCategory={selectedCategory}
-          onCategoryChange={setSelectedCategory}
+          value={searchQuery}
+          onChange={setSearchQuery}
+          filter={selectedCategory}
+          onFilterChange={setSelectedCategory}
+          filterOptions={[
+            { label: "All", value: "" },
+            { label: "Development", value: "development" },
+            { label: "Design", value: "design" },
+            { label: "Productivity", value: "productivity" },
+            { label: "Other", value: "other" }
+          ]}
+          placeholder="Search tools..."
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

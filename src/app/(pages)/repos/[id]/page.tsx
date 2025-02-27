@@ -26,7 +26,7 @@ import OverviewTab from "@/components/repos/tabs/OverviewTab";
 import ActivityTab from "@/components/repos/tabs/ActivityTab";
 import ContributorsTab from "@/components/repos/tabs/ContributorsTab";
 import DependenciesTab from "@/components/repos/tabs/DependenciesTab";
-import { getRepoDetails } from "@/lib/github";
+import { getRepoDetails, type GitHubResponse } from "@/lib/github";
 
 interface StatCardProps {
   title: string;
@@ -96,7 +96,7 @@ export default function RepoDetailPage() {
   const { toast } = useToast();
   const [repo, setRepo] = useState<Repository | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [githubData, setGithubData] = useState<any>(null);
+  const [githubData, setGithubData] = useState<GitHubResponse | null>(null);
 
   useEffect(() => {
     const fetchAllData = async () => {

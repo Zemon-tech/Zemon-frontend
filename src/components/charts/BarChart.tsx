@@ -3,7 +3,10 @@
 import { Bar, BarChart as RechartsBarChart, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 interface BarChartProps {
-  data: any[];
+  data: Array<{
+    name: string;
+    [key: string]: string | number; // Allow dynamic category values
+  }>;
   categories: string[];
 }
 

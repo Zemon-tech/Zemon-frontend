@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { Badge } from "@/components/ui/badge";
+import Image from "next/image";
 
 interface EventCardProps {
   event: {
@@ -44,7 +45,12 @@ export default function EventCard({ event, onDelete }: EventCardProps) {
         setIsAdmin(tokenData.role === 'admin');
       } catch (error) {
         console.error('Error decoding token:', error);
+        setCurrentUserId(null);
+        setIsAdmin(false);
       }
+    } else {
+      setCurrentUserId(null);
+      setIsAdmin(false);
     }
   }, []);
 
@@ -97,11 +103,12 @@ export default function EventCard({ event, onDelete }: EventCardProps) {
         )}
 
         <Link href={`/events/${event.id}`}>
-          <div className="relative h-40">
-            <img
+          <div className="relative w-full h-[13rem] overflow-hidden">
+            <Image
               src={event.image}
               alt={event.title}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              fill
+              className="object-cover transform group-hover:scale-105 transition-transform duration-500"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
             <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">

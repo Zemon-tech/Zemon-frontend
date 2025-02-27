@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Github, Linkedin, Link as LinkIcon, Save, AlertTriangle } from "lucide-react";
 import PageContainer from "@/components/layout/PageContainer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -155,48 +155,39 @@ export default function SettingsPage() {
     }
   };
 
-  // Extract fetchProfile function to be reusable
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        throw new Error('Not authenticated');
+        router.push('/login');
+        return;
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/profile`, {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Authorization': `Bearer ${token}`,
+        },
       });
 
       const data = await response.json();
-      if (data.success) {
-        // Update local storage with complete profile data
-        const updatedProfile = {
-          ...data.data,
-          linkedin: data.data.linkedin || '',
-          personalWebsite: data.data.personalWebsite || ''
-        };
-        setProfile(updatedProfile);
-        localStorage.setItem('user', JSON.stringify(updatedProfile));
 
-        // Automatically save the profile to ensure data consistency
+      if (data.success) {
+        setProfile(data.data);
+
+        // Auto-save profile data to localStorage
         try {
-          const saveResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/profile`, {
-            method: 'PUT',
+          const saveResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/profile/save`, {
+            method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
+              'Authorization': `Bearer ${token}`,
             },
-            body: JSON.stringify(updatedProfile)
+            body: JSON.stringify(data.data),
           });
 
           const saveData = await saveResponse.json();
           if (saveData.success) {
-            // Update local storage with saved data
-            localStorage.setItem('user', JSON.stringify(saveData.data));
-            
-            // Dispatch auth state change event
+            // Dispatch event to update auth state
             const event = new CustomEvent('auth-state-change', { detail: saveData.data });
             window.dispatchEvent(event);
           }
@@ -216,9 +207,8 @@ export default function SettingsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [router, toast]);
 
-  // Add an interval to periodically fetch profile data
   useEffect(() => {
     fetchProfile();
 
@@ -227,7 +217,7 @@ export default function SettingsPage() {
 
     // Cleanup interval on component unmount
     return () => clearInterval(intervalId);
-  }, []);
+  }, [fetchProfile]);
 
   if (isLoading) {
     return (

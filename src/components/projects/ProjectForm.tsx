@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { motion } from "framer-motion";
-import { X, Loader2, Code, Link as LinkIcon, Github, Tag, FileText, Globe } from "lucide-react";
+import { X, Code, Github, Tag, FileText, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ProjectFormProps {
@@ -20,8 +19,6 @@ interface ProjectFormProps {
 }
 
 export default function ProjectForm({ initialData, onSubmit, onCancel, isEdit = false }: ProjectFormProps) {
-  const [isLoading, setIsLoading] = useState(false);
-
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -163,10 +160,8 @@ export default function ProjectForm({ initialData, onSubmit, onCancel, isEdit = 
                 </Button>
                 <Button
                   type="submit"
-                  disabled={isLoading}
                   className="px-6 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors flex items-center gap-2"
                 >
-                  {isLoading && <Loader2 size={18} className="animate-spin" />}
                   {isEdit ? "Update Project" : "Add Project"}
                 </Button>
               </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { FileText, CheckCircle, AlertCircle, HelpCircle } from "lucide-react";
+import { HelpCircle } from "lucide-react";
 import PageContainer from "@/components/layout/PageContainer";
 
 export default function TermsPage() {
@@ -58,7 +58,7 @@ export default function TermsPage() {
                 </p>
                 <ul className="space-y-2">
                   <li>Respect open-source licenses and attributions</li>
-                  <li>Do not infringe on others' intellectual property</li>
+                  <li>Do not infringe on others&apos; intellectual property</li>
                   <li>Properly license your contributions</li>
                 </ul>
               </div>

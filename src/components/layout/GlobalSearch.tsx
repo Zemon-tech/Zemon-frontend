@@ -5,6 +5,7 @@ import { Search, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDebounce } from "../../hooks/useDebounce";
+import Image from "next/image";
 
 interface SearchResult {
   id: string;
@@ -173,19 +174,19 @@ export default function GlobalSearch() {
                     >
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full overflow-hidden bg-primary/10">
                         {result.avatar ? (
-                          <img 
-                            src={result.avatar} 
+                          <Image
+                            src={result.avatar}
                             alt={result.title}
+                            width={32}
+                            height={32}
                             className="h-full w-full object-cover"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.src = '/Zemon.svg';
-                            }}
                           />
                         ) : (
-                          <img 
-                            src="/Zemon.svg" 
+                          <Image
+                            src="/Zemon.svg"
                             alt="Default"
+                            width={32}
+                            height={32}
                             className="h-5 w-5"
                           />
                         )}

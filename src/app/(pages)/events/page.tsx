@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Download, Plus } from "lucide-react";
 import EventCard from "@/components/events/EventCard";
 import EventForm from "@/components/events/EventForm";
@@ -35,6 +35,21 @@ interface Event {
   registrations: number;
 }
 
+interface EventFormData {
+  title: string;
+  description: string;
+  date: string;
+  time: string;
+  location: string;
+  type: string;
+  mode: "online" | "in-person" | "hybrid";
+  capacity?: number;
+  registrationUrl?: string;
+  rewards?: string;
+  image: string;
+  tags: string[];
+}
+
 export default function EventsPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [events, setEvents] = useState<Event[]>([]);
@@ -66,7 +81,7 @@ export default function EventsPage() {
     }
   }, []);
 
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     try {
       const queryParams = new URLSearchParams();
       if (filterValue !== "all") {
@@ -91,13 +106,13 @@ export default function EventsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [filterValue, searchValue, toast]);
 
   useEffect(() => {
     fetchEvents();
-  }, [searchValue, filterValue]);
+  }, [fetchEvents]);
 
-  const handleSubmitEvent = async (formData: any) => {
+  const handleSubmitEvent = async (formData: EventFormData) => {
     try {
       console.log('Submitting event data:', formData);
 
@@ -267,6 +282,7 @@ export default function EventsPage() {
                 rewards: event.rewards || "",
                 image: event.image || "/placeholder-event.jpg",
                 tags: event.tags,
+                mode: event.mode as "online" | "in-person" | "hybrid",
                 organizer: event.organizer
               }}
               onDelete={() => handleDeleteEvent(event._id)}

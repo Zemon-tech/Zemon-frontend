@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Star, Globe, Book, Code, MessageSquare, ArrowUpRight } from "lucide-react";
+import { ArrowLeft, Star, Book, Code, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/components/ui/use-toast";
 import PageContainer from "@/components/layout/PageContainer";
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/carousel";
 import { Input } from "@/components/ui/input";
 import { API_BASE_URL } from "@/lib/api";
+import Image from 'next/image';
 
 interface ToolDetails {
   _id: string;
@@ -55,18 +56,42 @@ export default function ToolDetailsPage() {
   const params = useParams();
   const { toast } = useToast();
   const [tool, setTool] = useState<ToolDetails | null>(null);
-  const [activeTab, setActiveTab] = useState("overview");
   const [isLoading, setIsLoading] = useState(true);
   const [userReview, setUserReview] = useState<{ rating: number; comment: string; } | null>(null);
   const [newImageUrl, setNewImageUrl] = useState("");
   const [isAddingImage, setIsAddingImage] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
+  const fetchStoreItem = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/store/${params.id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch tool details');
+      }
+      const data = await response.json();
+      if (data.success) {
+        setTool(data.data);
+      } else {
+        throw new Error(data.message || 'Failed to fetch tool details');
+      }
+    } catch (error) {
+      console.error('Error fetching tool:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to fetch tool details",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [params.id, toast]);
+
   useEffect(() => {
     if (params.id) {
       fetchStoreItem();
     }
-  }, [params.id, toast]);
+  }, [params.id, fetchStoreItem]);
 
   useEffect(() => {
     // Find user's review when tool data is loaded
@@ -105,28 +130,6 @@ export default function ToolDetailsPage() {
       }
     }
   }, []);
-
-  const fetchStoreItem = async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/store/${params.id}`);
-      const data = await response.json();
-      if (data.success) {
-        setTool(data.data);
-      } else {
-        throw new Error(data.message || 'Failed to fetch store item details');
-      }
-    } catch (error) {
-      console.error('Error fetching store item details:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load store item details",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleAddImage = async () => {
     try {
@@ -217,13 +220,17 @@ export default function ToolDetailsPage() {
 
         {/* Hero Section */}
         <div className="flex items-start gap-8 mb-12">
-          <div className="relative w-40 h-40">
-            <img
-              src={tool.thumbnail}
-              alt={tool.name}
-              className="w-full h-full rounded-3xl object-cover shadow-lg"
-            />
-          </div>
+          {tool?.thumbnail && (
+            <div className="relative w-full aspect-video rounded-lg overflow-hidden mb-6">
+              <Image
+                src={tool.thumbnail}
+                alt={tool.name}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              />
+            </div>
+          )}
 
           <div className="flex-1">
             <div className="flex items-start justify-between">
@@ -328,27 +335,19 @@ export default function ToolDetailsPage() {
                 )}
               </div>
 
-              {tool.images && tool.images.length > 0 ? (
-                <Carousel className="w-full max-w-4xl mx-auto">
-                  <CarouselContent>
-                    {tool.images.map((image, index) => (
-                      <CarouselItem key={index}>
-                        <div className="aspect-video w-full overflow-hidden rounded-xl">
-                          <img
-                            src={image}
-                            alt={`${tool.name} screenshot ${index + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      </CarouselItem>
-                    ))}
-                  </CarouselContent>
-                  <CarouselPrevious />
-                  <CarouselNext />
-                </Carousel>
-              ) : (
-                <div className="text-center py-12 text-muted-foreground border rounded-xl">
-                  No images available
+              {tool?.images && tool.images.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+                  {tool.images.map((image, index) => (
+                    <div key={index} className="relative aspect-video rounded-lg overflow-hidden">
+                      <Image
+                        src={image}
+                        alt={`${tool.name} screenshot ${index + 1}`}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      />
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

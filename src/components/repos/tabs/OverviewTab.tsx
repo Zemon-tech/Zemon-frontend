@@ -9,7 +9,9 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
-import React, { useMemo } from "react";
+import React, { useMemo, useCallback } from "react";
+import { type Components } from 'react-markdown';
+import Image from 'next/image';
 
 interface OverviewTabProps {
   readme: string;
@@ -24,46 +26,45 @@ interface OverviewTabProps {
 }
 
 export default function OverviewTab({ readme, languages, branches, lastCommits, repoInfo }: OverviewTabProps) {
-  const getImagePath = (src: string) => {
+  const getImagePath = useCallback((src: string) => {
     if (!src) return '';
     if (src.startsWith('http')) return src;
     
     // Handle relative paths
     const cleanPath = src.replace(/^[./]+/, '');
     return `https://raw.githubusercontent.com/${repoInfo.owner}/${repoInfo.name}/${repoInfo.defaultBranch}/${cleanPath}`;
-  };
+  }, [repoInfo]);
 
   const markdownContent = useMemo(() => (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       rehypePlugins={[rehypeRaw]}
       components={{
-        code({node, inline, className, children, ...props}) {
-          const match = /language-(\w+)/.exec(className || '');
-          return !inline && match ? (
-            <div className="rounded-md overflow-hidden my-4">
-              <div className="bg-muted/50 px-4 py-2 text-xs text-muted-foreground border-b">
-                {match[1].toUpperCase()}
-              </div>
-              <SyntaxHighlighter
-                style={oneDark}
-                language={match[1]}
-                PreTag="div"
-                customStyle={{
-                  margin: 0,
-                  borderRadius: '0 0 6px 6px',
-                }}
-                {...props}
-              >
-                {String(children).replace(/\n$/, '')}
-              </SyntaxHighlighter>
+        img: ({ src, alt }: { src?: string; alt?: string }) => {
+          if (!src) return null;
+          
+          // Convert relative image paths to absolute GitHub URLs
+          const imageUrl = src.startsWith('http') 
+            ? src 
+            : `https://raw.githubusercontent.com/${repoInfo.owner}/${repoInfo.name}/${repoInfo.defaultBranch}/${src}`;
+          
+          return (
+            <div className="relative w-full h-64 my-4">
+              <Image
+                src={imageUrl}
+                alt={alt || 'README image'}
+                fill
+                className="object-contain"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              />
             </div>
-          ) : (
-            <code className="bg-muted px-1.5 py-0.5 rounded text-sm" {...props}>
-              {children}
-            </code>
           );
         },
+        code: ({ className, children, ...props }: { className?: string; children: React.ReactNode }) => (
+          <code className={`${className || ''} rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm`} {...props}>
+            {children}
+          </code>
+        ),
         h1: ({node, ...props}) => (
           <h1 
             className="text-2xl font-bold mt-8 mb-4 pb-2 border-b" 
@@ -132,70 +133,48 @@ export default function OverviewTab({ readme, languages, branches, lastCommits, 
             {...props} 
           />
         ),
-        img: ({node, src, ...props}) => {
-          if (!src) return null;
-          
-          const imageSrc = getImagePath(src);
-          const isShield = src.includes('shields.io') || 
-                          src.includes('github-readme-stats') ||
-                          src.includes('github-profile-trophy');
-          
-          return (
-            <span className={isShield ? 'inline-block mx-1' : 'block my-4'}>
-              <img 
-                src={imageSrc}
-                className={`${
-                  isShield ? '' : 'rounded-lg border max-w-full'
-                }`}
-                loading="lazy"
-                onError={(e) => {
-                  console.warn('Image failed to load:', imageSrc);
-                  e.currentTarget.style.display = 'none';
-                }}
-                {...props} 
-              />
-            </span>
-          );
-        },
-        table: ({node, ...props}) => (
+        table: (props) => (
           <div className="my-4 w-full overflow-x-auto">
             <table className="min-w-full divide-y divide-border whitespace-nowrap" {...props} />
           </div>
         ),
-        th: ({node, ...props}) => (
+        th: (props) => (
           <th 
             className="border bg-muted px-4 py-2 text-left font-semibold" 
             {...props} 
           />
         ),
-        tr: ({node, ...props}) => (
+        tr: (props) => (
           <tr className="hover:bg-muted/50 transition-colors" {...props} />
         ),
-        td: ({node, align, ...props}) => (
-          <td 
-            className={`px-4 py-2 text-sm ${
-              align === 'center' ? 'text-center' : ''
-            }`}
-            {...props} 
-          />
-        ),
-        div: ({node, className, children, ...props}) => {
-          const align = props['align'];
+        td: (props) => {
+          const { align, ...rest } = props;
+          return (
+            <td 
+              className={`px-4 py-2 text-sm ${
+                align === 'center' ? 'text-center' : ''
+              }`}
+              {...rest} 
+            />
+          );
+        },
+        div: (props: React.HTMLAttributes<HTMLDivElement> & { align?: string }) => {
+          const { className, children, align, ...rest } = props;
           return (
             <div 
               className={`${className || ''} ${
                 align === 'center' ? 'text-center flex flex-col items-center' : ''
               }`}
-              {...props}
+              {...rest}
             >
               {children}
             </div>
           );
         },
-        hr: ({node, ...props}) => (
+        hr: (props) => (
           <hr className="my-8 border-t border-border" {...props} />
         ),
-      }}
+      } as Components}
     >
       {readme || "No README available"}
     </ReactMarkdown>

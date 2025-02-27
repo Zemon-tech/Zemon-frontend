@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { Calendar, MapPin, Users, Heart, MessageSquare, Share2, Trophy, ArrowLeft, User, Check, Bell, BellPlus, Twitter, Linkedin, Globe, Mail, Phone, Facebook, Instagram } from "lucide-react";
+import { Calendar, MapPin, Users, MessageSquare, Share2, ArrowLeft, Check, Bell, BellPlus, Twitter, Linkedin, Globe, Mail, Phone, Facebook, Instagram } from "lucide-react";
 import PageContainer from "@/components/layout/PageContainer";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { API_BASE_URL } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Progress } from "@/components/ui/progress";
+import Image from "next/image";
 
 interface Event {
   _id: string;
@@ -134,8 +135,8 @@ export default function EventDetailPage() {
   const [countdown, setCountdown] = useState<CountdownTime>({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [isReminderSet, setIsReminderSet] = useState(false);
 
-    const fetchEventDetail = async () => {
-      try {
+  const fetchEventDetail = useCallback(async () => {
+    try {
       const token = localStorage.getItem('token');
       
       if (!token) {
@@ -156,31 +157,31 @@ export default function EventDetailPage() {
       const response = await fetch(`${API_BASE_URL}/api/events/${params.id}`, {
         headers
       });
-        const data = await response.json();
+      const data = await response.json();
       
-        if (data.success) {
-          setEvent(data.data);
+      if (data.success) {
+        setEvent(data.data);
         setIsRegistered(!!data.data.isUserRegistered);
-        } else {
-          throw new Error(data.message || 'Failed to fetch event details');
-        }
-      } catch (error) {
-        console.error('Error fetching event detail:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load event details",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
+      } else {
+        throw new Error(data.message || 'Failed to fetch event details');
       }
-    };
+    } catch (error) {
+      console.error('Error fetching event detail:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load event details",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [params.id, toast, router]);
 
   useEffect(() => {
     if (params.id) {
       fetchEventDetail();
     }
-  }, [params.id]);
+  }, [params.id, fetchEventDetail]);
 
   useEffect(() => {
     const calculateTimeLeft = () => {
@@ -344,12 +345,27 @@ export default function EventDetailPage() {
           <span className="text-foreground">Event Details</span>
         </div>
 
+        {/* Registration Progress */}
+        {event.capacity && (
+          <div className="p-6 bg-card rounded-xl border shadow-sm mb-8">
+            <div className="flex justify-between mb-2">
+              <span className="text-sm font-medium">Registration Progress</span>
+              <span className="text-sm text-muted-foreground">
+                {event.registrations} / {event.capacity} spots filled
+              </span>
+            </div>
+            <Progress value={progressPercentage} className="h-2" />
+          </div>
+        )}
+
         {/* Hero Section with Gradient Overlay */}
         <div className="relative h-[500px] rounded-xl overflow-hidden mb-8">
-          <img
+          <Image
             src={event.image}
             alt={event.title}
-            className="w-full h-full object-cover"
+            fill
+            className="object-cover"
+            priority
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
@@ -564,27 +580,6 @@ export default function EventDetailPage() {
                 </div>
               </div>
             </div>
-
-            {/* Registration Progress */}
-            {event.capacity && (
-              <div className="p-6 bg-card rounded-xl border shadow-sm">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-semibold">Registration Progress</h3>
-                  <span className="text-sm text-muted-foreground">
-                    {event.registrations}/{event.capacity}
-                  </span>
-                </div>
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-primary transition-all duration-500"
-                    style={{ width: `${Math.min((event.registrations / event.capacity) * 100, 100)}%` }}
-                  />
-                </div>
-                <p className="text-sm text-muted-foreground mt-2">
-                  {event.capacity - event.registrations} spots remaining
-                </p>
-              </div>
-            )}
 
             {/* Contact Information */}
             {event.contactInfo && (

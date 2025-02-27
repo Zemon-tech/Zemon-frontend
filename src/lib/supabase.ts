@@ -1,9 +1,9 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, Session } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
 export const signInWithGitHub = async () => {
   const { data, error } = await supabase.auth.signInWithOAuth({
@@ -17,10 +17,8 @@ export const signInWithGitHub = async () => {
   return data;
 };
 
-export const handleAuthStateChange = (callback: (session: any) => void) => {
+export const handleAuthStateChange = (callback: (session: Session | null) => void) => {
   return supabase.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_IN') {
-      callback(session);
-    }
+    callback(session);
   });
 }; 

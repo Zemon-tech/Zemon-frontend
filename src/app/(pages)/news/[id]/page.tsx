@@ -9,7 +9,7 @@ import PageContainer from "@/components/layout/PageContainer";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import NewsCard from "@/components/news/NewsCard";
+import Image from "next/image";
 
 interface NewsDetail {
   _id: string;
@@ -32,6 +32,16 @@ interface RelatedNews {
   title: string;
   category: string;
   date: string;
+  image: string;
+  excerpt: string;
+  views: number;
+}
+
+interface NewsApiResponse {
+  _id: string;
+  title: string;
+  category: string;
+  createdAt: string;
   image: string;
   excerpt: string;
   views: number;
@@ -64,24 +74,24 @@ export default function NewsDetailPage() {
 
           // Transform the data to ensure proper date and views
           const transformedRelated = relatedData.data.news
-            .filter((item: any) => item._id !== params.id)
+            .filter((item: NewsApiResponse) => item._id !== params.id)
             .slice(0, 3)
-            .map((item: any) => ({
+            .map((item: NewsApiResponse) => ({
               _id: item._id,
               title: item.title,
               category: item.category,
-              date: item.createdAt || new Date().toISOString(), // Use createdAt or fallback
+              date: item.createdAt || new Date().toISOString(),
               image: item.image || '/placeholder-news.jpg',
               excerpt: item.excerpt,
-              views: typeof item.views === 'number' ? item.views : 0 // Ensure views is a number
+              views: typeof item.views === 'number' ? item.views : 0
             }));
 
           setRelatedNews(transformedRelated);
         } else {
           throw new Error(newsData.message || 'Failed to fetch news detail');
         }
-      } catch (error) {
-        console.error('Error:', error);
+      } catch (err) {
+        console.error('Error:', err);
         toast({
           title: "Error",
           description: "Failed to load content",
@@ -222,10 +232,12 @@ export default function NewsDetailPage() {
           {/* Featured Image */}
           {news.image && (
             <div className="relative h-[400px] rounded-xl overflow-hidden shadow-lg">
-              <img
+              <Image
                 src={news.image}
                 alt={news.title}
-                className="w-full h-full object-cover"
+                fill
+                className="object-cover"
+                priority
               />
             </div>
           )}

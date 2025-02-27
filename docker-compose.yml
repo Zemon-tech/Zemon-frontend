@@ -11,24 +11,61 @@ services:
       - MONGODB_URI=mongodb://mongodb:27017/spherex
       - NODE_ENV=production
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
     networks:
       - spherex-network
-    restart: always
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
 
   mongodb:
     image: mongo:latest
     ports:
-      - "27017:27017"
+      - "127.0.0.1:27017:27017"  # Only allow local connections
     volumes:
       - mongodb_data:/data/db
     networks:
       - spherex-network
-    restart: always
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD:-changeme}
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.7'
+          memory: 1G
+        reservations:
+          cpus: '0.3'
+          memory: 512M
 
 networks:
   spherex-network:
     driver: bridge
 
 volumes:
-  mongodb_data: 
+  mongodb_data:
+    driver: local 

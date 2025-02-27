@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { X, Loader2, Wrench, Tag, ImageIcon, ListFilter, Globe, Github, DollarSign } from "lucide-react";
+import Image from "next/image";
 
 interface ToolFormProps {
   initialData?: {
@@ -22,7 +23,7 @@ interface ToolFormProps {
 
 export default function ToolForm({ initialData, onSubmit, onCancel, isEdit = false }: ToolFormProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [imagePreview, setImagePreview] = useState(initialData?.image || "");
+  const [previewUrl, setPreviewUrl] = useState(initialData?.image || "");
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -38,7 +39,7 @@ export default function ToolForm({ initialData, onSubmit, onCancel, isEdit = fal
   };
 
   const handleImageUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setImagePreview(e.target.value);
+    setPreviewUrl(e.target.value);
   };
 
   return (
@@ -180,13 +181,13 @@ export default function ToolForm({ initialData, onSubmit, onCancel, isEdit = fal
                 />
               </div>
 
-              {imagePreview && (
-                <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="object-cover w-full h-full"
-                    onError={() => setImagePreview("")}
+              {previewUrl && (
+                <div className="relative w-32 h-32 rounded-lg overflow-hidden">
+                  <Image
+                    src={previewUrl}
+                    alt="Tool thumbnail preview"
+                    fill
+                    className="object-cover"
                   />
                 </div>
               )}

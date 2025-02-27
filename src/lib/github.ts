@@ -21,11 +21,30 @@ async function githubFetch(endpoint: string, options: GitHubApiOptions = {}) {
   return response.json();
 }
 
-interface GitHubResponse {
-  repoData: {
-    readme: string;
-    [key: string]: any;
+interface GitHubRepoData {
+  readme: string;
+  name: string;
+  description: string;
+  default_branch: string;
+  stargazers_count: number;
+  forks_count: number;
+  open_issues_count: number;
+  watchers_count: number;
+  created_at: string;
+  updated_at: string;
+  homepage?: string;
+  language?: string;
+  license?: {
+    key: string;
+    name: string;
+    url: string;
   };
+  visibility: string;
+  topics: string[];
+}
+
+export interface GitHubResponse {
+  repoData: GitHubRepoData;
   languages: Array<{
     name: string;
     value: number;
@@ -70,6 +89,42 @@ interface GitHubResponse {
   };
 }
 
+interface GitHubCommit {
+  sha: string;
+  commit: {
+    author: {
+      name: string;
+      date: string;
+    };
+    message: string;
+  };
+}
+
+interface GitHubPullRequest {
+  number: number;
+  title: string;
+  state: string;
+  created_at: string;
+  html_url: string;
+  user: {
+    login: string;
+    avatar_url: string;
+  };
+}
+
+interface GitHubContributor {
+  login: string;
+  avatar_url: string;
+  contributions: number;
+}
+
+interface GitHubBranch {
+  name: string;
+  commit: {
+    sha: string;
+  };
+}
+
 export async function getRepoDetails(owner: string, repo: string): Promise<GitHubResponse> {
   try {
     const [repoData, languages, commits, pullRequests, contributors, branches] = await Promise.all([
@@ -106,19 +161,24 @@ export async function getRepoDetails(owner: string, repo: string): Promise<GitHu
       .sort((a, b) => b.value - a.value);
 
     // Transform commits data with proper typing
-    const commitsByDate = commits.reduce((acc: Record<string, number>, commit: any) => {
-      const date = new Date(commit.commit.author.date).toLocaleDateString();
+    const commitsByDate = commits.reduce((acc: Record<string, number>, commit: GitHubCommit) => {
+      const date = new Date(commit.commit.author.date).toISOString().split('T')[0];
       acc[date] = (acc[date] || 0) + 1;
       return acc;
     }, {});
 
-    const activityData = Object.entries(commitsByDate).map(([date, count]) => ({
-      date,
-      commits: count as number,
-      pullRequests: pullRequests.filter((pr: any) => 
-        new Date(pr.created_at).toLocaleDateString() === date
-      ).length
-    }));
+    const activityData = Object.entries(commitsByDate).map(([date, count]) => {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      return {
+        date,
+        commits: count as number,
+        pullRequests: pullRequests.filter((pr: GitHubPullRequest) =>
+          new Date(pr.created_at) >= thirtyDaysAgo
+        ).length
+      };
+    });
 
     return {
       repoData: {
@@ -131,32 +191,29 @@ export async function getRepoDetails(owner: string, repo: string): Promise<GitHu
         defaultBranch,
       },
       languages: languagesData,
-      commits: commits.map((commit: any) => ({
-        date: commit.commit.author.date,
+      commits: commits.map((commit: GitHubCommit) => ({
+        sha: commit.sha,
         message: commit.commit.message,
         author: commit.commit.author.name,
-        sha: commit.sha,
-        url: commit.html_url,
+        date: commit.commit.author.date,
       })),
-      pullRequests: pullRequests.map((pr: any) => ({
-        title: pr.title,
-        author: pr.user.login,
-        status: pr.merged_at ? "merged" : pr.state,
-        createdAt: pr.created_at,
+      pullRequests: pullRequests.map((pr: GitHubPullRequest) => ({
         number: pr.number,
+        title: pr.title,
+        state: pr.state,
         url: pr.html_url,
+        author: pr.user.login,
+        avatar: pr.user.avatar_url,
       })),
-      contributors: contributors.map((contributor: any) => ({
-        login: contributor.login,
-        avatar_url: contributor.avatar_url,
+      contributors: contributors.map((contributor: GitHubContributor) => ({
+        username: contributor.login,
+        avatar: contributor.avatar_url,
         contributions: contributor.contributions,
-        profile: contributor.html_url,
       })),
       activityData,
-      branches: branches.map((branch: any) => ({
+      branches: branches.map((branch: GitHubBranch) => ({
         name: branch.name,
-        lastCommit: branch.commit.sha,
-        protected: branch.protected,
+        sha: branch.commit.sha,
       })),
     };
   } catch (error) {

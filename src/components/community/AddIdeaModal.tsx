@@ -24,7 +24,7 @@ export default function AddIdeaModal({ isOpen, onClose, onIdeaAdded }: AddIdeaMo
   });
   const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
 
@@ -55,11 +55,11 @@ export default function AddIdeaModal({ isOpen, onClose, onIdeaAdded }: AddIdeaMo
         onIdeaAdded?.();
         onClose();
       }
-    } catch (error: any) {
-      console.error('Error sharing idea:', error);
+    } catch (error: unknown) {
+      console.error('Error adding idea:', error);
       toast({
         title: "Error",
-        description: error.response?.data?.message || "Failed to share your idea. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to add idea",
         variant: "destructive",
       });
     } finally {

@@ -10,7 +10,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { PlusCircle, MinusCircle } from 'lucide-react';
 import {
   Dialog,
@@ -34,7 +33,9 @@ const eventSchema = z.object({
     amount: z.number().default(0),
     currency: z.string().default('USD')
   }).optional(),
-  highlights: z.array(z.string()).default([]),
+  highlights: z.array(z.object({
+    text: z.string()
+  })).default([]),
   speakers: z.array(z.object({
     name: z.string(),
     role: z.string().optional(),
@@ -45,30 +46,30 @@ const eventSchema = z.object({
       linkedin: z.string().optional(),
       website: z.string().optional()
     }).optional()
-  })).optional(),
+  })).default([]),
   workshops: z.array(z.object({
     title: z.string(),
     description: z.string().optional(),
     speaker: z.string().optional(),
     duration: z.string().optional(),
     requirements: z.string().optional()
-  })).optional(),
+  })).default([]),
   eligibility: z.string().optional(),
   faqs: z.array(z.object({
     question: z.string(),
     answer: z.string()
-  })).optional(),
+  })).default([]),
   pastHighlights: z.array(z.object({
     title: z.string().optional(),
     description: z.string().optional(),
     image: z.string().optional()
-  })).optional(),
+  })).default([]),
   sponsors: z.array(z.object({
     name: z.string(),
     logo: z.string().optional(),
     website: z.string().optional(),
     tier: z.enum(['platinum', 'gold', 'silver', 'bronze', 'partner']).optional()
-  })).optional(),
+  })).default([]),
   socialMedia: z.object({
     twitter: z.string().optional(),
     facebook: z.string().optional(),
@@ -82,7 +83,7 @@ const eventSchema = z.object({
     whatsapp: z.string().optional()
   }).optional(),
   rewards: z.string().optional(),
-  image: z.string(),
+  image: z.string().optional(),
   tags: z.union([z.string(), z.array(z.string())]).transform(val => 
     typeof val === 'string' ? val.split(',').map(tag => tag.trim()).filter(Boolean) : val
   ).default([]),
@@ -117,36 +118,30 @@ export function EventForm({ onSubmit, initialData, onCancel }: EventFormProps) {
     }
   });
 
-  const highlightArray = useFieldArray({
+  const { fields: highlightFields, append: appendHighlight, remove: removeHighlight } = useFieldArray({
     control,
-    name: 'highlights' as any
+    name: 'highlights'
   });
 
-  const speakerArray = useFieldArray({
+  const { fields: speakerFields, append: appendSpeaker, remove: removeSpeaker } = useFieldArray({
     control,
-    name: 'speakers' as any
+    name: 'speakers'
   });
 
-  const workshopArray = useFieldArray({
+  const { fields: workshopFields, append: appendWorkshop, remove: removeWorkshop } = useFieldArray({
     control,
-    name: 'workshops' as any
+    name: 'workshops'
   });
 
-  const faqArray = useFieldArray({
+  const { fields: faqFields, append: appendFaq, remove: removeFaq } = useFieldArray({
     control,
-    name: 'faqs' as any
+    name: 'faqs'
   });
 
-  const sponsorArray = useFieldArray({
+  const { fields: sponsorFields, append: appendSponsor, remove: removeSponsor } = useFieldArray({
     control,
-    name: 'sponsors' as any
+    name: 'sponsors'
   });
-
-  const { fields: highlightFields, append: appendHighlight, remove: removeHighlight } = highlightArray;
-  const { fields: speakerFields, append: appendSpeaker, remove: removeSpeaker } = speakerArray;
-  const { fields: workshopFields, append: appendWorkshop, remove: removeWorkshop } = workshopArray;
-  const { fields: faqFields, append: appendFaq, remove: removeFaq } = faqArray;
-  const { fields: sponsorFields, append: appendSponsor, remove: removeSponsor } = sponsorArray;
 
   const handleClose = () => {
     setIsOpen(false);
@@ -157,7 +152,6 @@ export function EventForm({ onSubmit, initialData, onCancel }: EventFormProps) {
     try {
       const formattedData = {
         ...data,
-        tags: Array.isArray(data.tags) ? data.tags : (typeof data.tags === 'string' ? (data.tags as string).split(',').map(tag => tag.trim()).filter(Boolean) : []),
         highlights: Array.isArray(data.highlights) ? data.highlights : [],
         speakers: Array.isArray(data.speakers) ? data.speakers : [],
         workshops: Array.isArray(data.workshops) ? data.workshops : [],
@@ -175,7 +169,47 @@ export function EventForm({ onSubmit, initialData, onCancel }: EventFormProps) {
   };
 
   const handleAddHighlight = () => {
-    (appendHighlight as any)('');
+    appendHighlight({ text: '' });
+  };
+
+  const handleAddSpeaker = () => {
+    appendSpeaker({
+      name: '',
+      role: '',
+      bio: '',
+      image: '',
+      social: {
+        twitter: '',
+        linkedin: '',
+        website: ''
+      }
+    });
+  };
+
+  const handleAddWorkshop = () => {
+    appendWorkshop({
+      title: '',
+      description: '',
+      speaker: '',
+      duration: '',
+      requirements: ''
+    });
+  };
+
+  const handleAddFaq = () => {
+    appendFaq({
+      question: '',
+      answer: ''
+    });
+  };
+
+  const handleAddSponsor = () => {
+    appendSponsor({
+      name: '',
+      logo: '',
+      website: '',
+      tier: 'bronze'
+    });
   };
 
   const renderStepContent = (step: number) => {
@@ -292,7 +326,7 @@ export function EventForm({ onSubmit, initialData, onCancel }: EventFormProps) {
             <h3 className="text-lg font-semibold">Highlights</h3>
             {highlightFields.map((field, index) => (
               <div key={field.id} className="flex gap-2">
-                <Input {...register(`highlights.${index}`)} placeholder="Add a highlight" />
+                <Input {...register(`highlights.${index}.text`)} placeholder="Add a highlight" />
                 <Button type="button" variant="ghost" onClick={() => removeHighlight(index)}>
                   <MinusCircle className="h-4 w-4" />
                 </Button>
@@ -356,13 +390,7 @@ export function EventForm({ onSubmit, initialData, onCancel }: EventFormProps) {
                     </CardContent>
                   </Card>
                 ))}
-                <Button type="button" variant="outline" onClick={() => appendSpeaker({
-                  name: '',
-                  role: '',
-                  bio: '',
-                  image: '',
-                  social: { twitter: '', linkedin: '', website: '' }
-                })}>
+                <Button type="button" variant="outline" onClick={handleAddSpeaker}>
                   <PlusCircle className="h-4 w-4 mr-2" /> Add Speaker
                 </Button>
               </div>
@@ -401,13 +429,7 @@ export function EventForm({ onSubmit, initialData, onCancel }: EventFormProps) {
                     </CardContent>
                   </Card>
                 ))}
-                <Button type="button" variant="outline" onClick={() => appendWorkshop({
-                  title: '',
-                  description: '',
-                  speaker: '',
-                  duration: '',
-                  requirements: ''
-                })}>
+                <Button type="button" variant="outline" onClick={handleAddWorkshop}>
                   <PlusCircle className="h-4 w-4 mr-2" /> Add Workshop
                 </Button>
               </div>
@@ -439,7 +461,7 @@ export function EventForm({ onSubmit, initialData, onCancel }: EventFormProps) {
                     </CardContent>
                   </Card>
                 ))}
-                <Button type="button" variant="outline" onClick={() => appendFaq({ question: '', answer: '' })}>
+                <Button type="button" variant="outline" onClick={handleAddFaq}>
                   <PlusCircle className="h-4 w-4 mr-2" /> Add FAQ
                 </Button>
               </div>
@@ -485,12 +507,7 @@ export function EventForm({ onSubmit, initialData, onCancel }: EventFormProps) {
                     </CardContent>
                   </Card>
                 ))}
-                <Button type="button" variant="outline" onClick={() => appendSponsor({
-                  name: '',
-                  logo: '',
-                  website: '',
-                  tier: 'partner'
-                })}>
+                <Button type="button" variant="outline" onClick={handleAddSponsor}>
                   <PlusCircle className="h-4 w-4 mr-2" /> Add Sponsor
                 </Button>
               </div>
