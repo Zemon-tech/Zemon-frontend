@@ -14,40 +14,24 @@ import { useRouter } from "next/navigation";
 
 interface Event {
   _id: string;
-  title: string;
-  description: string;
+  type: "hackathon" | "workshop" | "conference" | "meetup" | "webinar";
   date: string;
+  title: string;
+  tags: string[];
+  description: string;
   time: string;
   location: string;
-  type: string;
-  mode: string;
-  capacity?: number;
-  registrationUrl?: string;
-  rewards?: string;
+  mode: "online" | "in-person" | "hybrid";
   image: string;
-  tags: string[];
   organizer: {
     _id: string;
     name: string;
-    avatar: string;
   };
-  attendees: string[];
+  createdAt: string;
+  website?: string;
   registrations: number;
-}
-
-interface EventFormData {
-  title: string;
-  description: string;
-  date: string;
-  time: string;
-  location: string;
-  type: string;
-  mode: "online" | "in-person" | "hybrid";
-  capacity?: number;
   registrationUrl?: string;
   rewards?: string;
-  image: string;
-  tags: string[];
 }
 
 export default function EventsPage() {
@@ -57,6 +41,7 @@ export default function EventsPage() {
   const [searchValue, setSearchValue] = useState("");
   const [filterValue, setFilterValue] = useState("all");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -112,20 +97,38 @@ export default function EventsPage() {
     fetchEvents();
   }, [fetchEvents]);
 
-  const handleSubmitEvent = async (formData: EventFormData) => {
+  const handleSubmitEvent = async (formData: {
+    type: "hackathon" | "workshop" | "conference" | "meetup" | "webinar";
+    date: string;
+    title: string;
+    tags: string[];
+    description: string;
+    time: string;
+    location: string;
+    mode: "online" | "in-person" | "hybrid";
+    image?: string;
+    website?: string;
+    registrationUrl?: string;
+    rewards?: string;
+  }) => {
     try {
-      console.log('Submitting event data:', formData);
-
+      setIsSubmitting(true);
       const token = localStorage.getItem('token');
       if (!token) {
         toast({
-          title: "Error",
-          description: "Please login to create an event",
+          title: "Authentication Required",
+          description: "Please log in to create events",
           variant: "destructive",
         });
-        router.push('/auth/login');
+        router.push('/login');
         return;
       }
+
+      // Ensure image is a string
+      const eventData = {
+        ...formData,
+        image: formData.image || '/placeholder-event.jpg' // Provide a default image if none is provided
+      };
 
       const response = await fetch(`${API_BASE_URL}/api/events`, {
         method: 'POST',
@@ -133,17 +136,17 @@ export default function EventsPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(eventData),
       });
 
       const data = await response.json();
-      
       if (data.success) {
         toast({
           title: "Success",
           description: "Event created successfully",
         });
-        router.push(`/events/${data.data._id}`);
+        setShowAddForm(false);
+        fetchEvents(); // Refresh the events list
       } else {
         throw new Error(data.message || 'Failed to create event');
       }
@@ -151,9 +154,11 @@ export default function EventsPage() {
       console.error('Error creating event:', error);
       toast({
         title: "Error",
-        description: "Failed to create event",
+        description: error instanceof Error ? error.message : "Failed to create event",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -230,9 +235,13 @@ export default function EventsPage() {
         description="Discover and participate in exciting tech events"
         action={
           isAdmin && (
-            <Button className="gap-2" onClick={() => setShowAddForm(true)}>
+            <Button 
+              className="gap-2" 
+              onClick={() => setShowAddForm(true)}
+              disabled={isSubmitting}
+            >
               <Plus className="w-4 h-4" />
-              Create Event
+              {isSubmitting ? "Creating..." : "Create Event"}
             </Button>
           )
         }

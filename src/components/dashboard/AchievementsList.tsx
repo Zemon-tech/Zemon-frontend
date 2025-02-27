@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Award, Star, Zap, Target, Trophy, Flame } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 
 const achievements = [

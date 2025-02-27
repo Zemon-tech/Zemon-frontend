@@ -695,9 +695,11 @@ export default function EventDetailPage() {
               {event.sponsors.map((sponsor, index) => (
                 <div key={index} className="flex flex-col items-center text-center p-4 rounded-lg bg-muted/50">
                   {sponsor.logo ? (
-                    <img 
+                    <Image 
                       src={sponsor.logo} 
                       alt={sponsor.name}
+                      width={80}
+                      height={80}
                       className="h-20 w-auto object-contain mb-3"
                     />
                   ) : (

@@ -1,27 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, GitBranch, Star, Users, GitFork, AlertCircle, GitPullRequest } from "lucide-react";
+import { useParams } from "next/navigation";
+import { ArrowLeft, Star, GitFork, AlertCircle, GitPullRequest } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/components/ui/use-toast";
 import PageContainer from "@/components/layout/PageContainer";
-import {
-  LineChart,
-  PieChart,
-  BarChart,
-  ResponsiveContainer,
-} from "recharts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Github } from "lucide-react";
+import Image from "next/image";
 import OverviewTab from "@/components/repos/tabs/OverviewTab";
 import ActivityTab from "@/components/repos/tabs/ActivityTab";
 import ContributorsTab from "@/components/repos/tabs/ContributorsTab";
@@ -32,14 +26,6 @@ interface StatCardProps {
   title: string;
   value: number;
   icon: React.ReactNode;
-}
-
-interface Contributor {
-  login: string;
-  avatar_url: string;
-  contributions: number;
-  pullRequests: number;
-  reviews: number;
 }
 
 interface Repository {
@@ -80,6 +66,14 @@ interface Repository {
     commits: number;
     pullRequests: number;
   }>;
+  pullRequestsData?: Array<{
+    title: string;
+    author: string;
+    status: "open" | "merged" | "closed";
+    createdAt: string;
+    number: number;
+    url: string;
+  }>;
   dependencies?: Array<{
     name: string;
     version: string;
@@ -90,18 +84,84 @@ interface Repository {
   }>;
 }
 
+interface PullRequestData {
+  title: string;
+  author: string;
+  status: string;
+  createdAt: string;
+  number: number;
+  url: string;
+}
+
+interface TransformedPullRequest {
+  title: string;
+  author: string;
+  status: "open" | "merged" | "closed";
+  createdAt: string;
+  number: number;
+  url: string;
+}
+
+interface GitHubResponseWithTransformed extends Omit<GitHubResponse, 'pullRequests'> {
+  pullRequests: TransformedPullRequest[];
+}
+
 export default function RepoDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const { toast } = useToast();
   const [repo, setRepo] = useState<Repository | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [githubData, setGithubData] = useState<GitHubResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [githubData, setGithubData] = useState<GitHubResponseWithTransformed | null>(null);
+
+  // Transform GitHub pull request status to our expected type
+  const transformPullRequests = (prs: PullRequestData[]): TransformedPullRequest[] => {
+    return prs.map(pr => {
+      // Ensure status is one of our expected values
+      let status: "open" | "merged" | "closed" = "open";
+      const rawStatus = pr.status?.toLowerCase() || "open";
+      if (rawStatus === "merged" || rawStatus === "closed") {
+        status = rawStatus;
+      }
+
+      return {
+        title: pr.title,
+        author: pr.author,
+        status,
+        createdAt: pr.createdAt,
+        number: pr.number,
+        url: pr.url
+      };
+    });
+  };
+
+  // Transform GitHub branches to match expected type
+  const transformBranches = (branches: Array<{ name: string; lastCommit: string; protected: boolean; }>) => {
+    return branches.map(branch => ({
+      name: branch.name,
+      commit: {
+        sha: branch.lastCommit,
+        url: `${repo?.github_url}/commit/${branch.lastCommit}`
+      }
+    }));
+  };
+
+  // Transform commits to match expected type
+  const transformCommits = (commits: Array<{ date: string; message: string; author: string; sha: string; url: string; }>) => {
+    return commits.map(commit => ({
+      sha: commit.sha,
+      message: commit.message,
+      date: commit.date,
+      author: {
+        name: commit.author,
+        email: `${commit.author}@github.com` // Using a placeholder email since it's not provided
+      }
+    }));
+  };
 
   useEffect(() => {
     const fetchAllData = async () => {
       try {
-        setIsLoading(true);
+        setLoading(true);
         
         // Fetch repo data from your API
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/repos/${params.id}`);
@@ -117,7 +177,12 @@ export default function RepoDetailPage() {
           
           // Fetch GitHub data
           const githubData = await getRepoDetails(owner, repoName);
-          setGithubData(githubData);
+          // Transform pull requests to ensure correct typing
+          const transformedGithubData: GitHubResponseWithTransformed = {
+            ...githubData,
+            pullRequests: transformPullRequests(githubData.pullRequests || [])
+          };
+          setGithubData(transformedGithubData);
         } else {
           throw new Error(data.message || 'Failed to fetch repository details');
         }
@@ -129,7 +194,7 @@ export default function RepoDetailPage() {
           variant: "destructive",
         });
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
@@ -138,7 +203,7 @@ export default function RepoDetailPage() {
     }
   }, [params.id, toast]);
 
-  if (isLoading) {
+  if (loading) {
     return (
       <PageContainer>
         <div className="animate-pulse space-y-4 py-8">
@@ -182,11 +247,13 @@ export default function RepoDetailPage() {
 
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
-            <div className="h-16 w-16 rounded-xl bg-primary/10 flex items-center justify-center">
-              <img
+            <div className="h-16 w-16 rounded-xl bg-primary/10 flex items-center justify-center relative">
+              <Image
                 src={repo.avatar || "/Z.jpg"}
                 alt={repo.name}
-                className="h-12 w-12"
+                width={48}
+                height={48}
+                className="object-contain"
               />
             </div>
             <div>
@@ -247,12 +314,12 @@ export default function RepoDetailPage() {
           <OverviewTab
             readme={githubData?.repoData?.readme || ""}
             languages={githubData?.languages || []}
-            branches={githubData?.branches || []}
-            lastCommits={githubData?.commits || []}
+            branches={transformBranches(githubData?.branches || [])}
+            lastCommits={transformCommits(githubData?.commits || [])}
             repoInfo={githubData?.repoInfo || {
               owner: repo?.owner || '',
               name: repo?.name || '',
-              defaultBranch: 'main' // fallback
+              defaultBranch: 'main'
             }}
           />
         </TabsContent>

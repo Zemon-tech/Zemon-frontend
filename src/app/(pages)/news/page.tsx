@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import PageContainer from "@/components/layout/PageContainer";

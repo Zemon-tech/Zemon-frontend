@@ -117,7 +117,7 @@ export default function NewsDetailPage() {
       });
       // Reset the copied state after 2 seconds
       setTimeout(() => setIsCopied(false), 2000);
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to copy link",
@@ -312,7 +312,7 @@ export default function NewsDetailPage() {
               <h2 className="text-lg font-semibold">Related Articles</h2>
             </div>
 
-            {/* Articles List */}
+            {/* Related Articles List */}
             <div className="p-4">
               <div className="space-y-6">
                 {relatedNews.map((article) => (
@@ -324,10 +324,11 @@ export default function NewsDetailPage() {
                     <div className="space-y-3 hover:bg-muted/50 rounded-lg transition-colors p-2 -mx-2">
                       {/* Image Container */}
                       <div className="relative aspect-[16/9] rounded-lg overflow-hidden">
-                        <img
+                        <Image
                           src={article.image}
                           alt={article.title}
-                          className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+                          fill
+                          className="object-cover transform group-hover:scale-105 transition-transform duration-500"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                         <div className="absolute bottom-2 left-2">

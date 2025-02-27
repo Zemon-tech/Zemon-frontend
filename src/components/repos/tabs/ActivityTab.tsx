@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ActivityChart from "../charts/ActivityChart";
-import { GitPullRequest, GitCommit, GitMerge } from "lucide-react";
+import { GitPullRequest, GitMerge } from "lucide-react";
 
 interface ActivityTabProps {
   activityData: {

@@ -1,9 +1,33 @@
-import { Octokit } from "@octokit/rest";
-
 const GITHUB_API_BASE = "https://api.github.com";
 
 interface GitHubApiOptions {
   headers?: HeadersInit;
+}
+
+interface GitHubRepo {
+  name: string;
+  description: string | null;
+  stargazers_count: number;
+  forks_count: number;
+  language: string | null;
+  html_url: string;
+  private: boolean;
+  updated_at: string;
+}
+
+interface GitHubOrg {
+  login: string;
+  avatar_url: string;
+}
+
+interface GitHubUser {
+  login: string;
+  avatar_url: string;
+  name: string | null;
+  bio: string | null;
+  public_repos: number;
+  followers: number;
+  following: number;
 }
 
 async function githubFetch(endpoint: string, options: GitHubApiOptions = {}) {
@@ -277,18 +301,6 @@ interface GitHubUserData {
     login: string;
     avatar_url: string;
   }>;
-  pinnedRepos: Array<{
-    name: string;
-    description: string;
-    stars: number;
-    forks: number;
-    language: string;
-  }>;
-  contributionStats: {
-    totalContributions: number;
-    currentStreak: number;
-    longestStreak: number;
-  };
   repositories: Array<{
     name: string;
     description: string;
@@ -301,114 +313,49 @@ interface GitHubUserData {
   }>;
 }
 
-interface GitHubRepo {
-  name: string;
-  description: string;
-  html_url: string;
-  stargazers_count: number;
-  forks_count: number;
-  language: string;
-  private: boolean;
-  updated_at: string;
-}
-
 export async function fetchGitHubProfile(username: string): Promise<GitHubUserData> {
-  const token = process.env.NEXT_PUBLIC_GITHUB_ACCESS_TOKEN;
-  
-  if (!token) {
-    console.error('GitHub access token is not configured');
-    throw new Error('GitHub access token is not configured');
-  }
-
-  const octokit = new Octokit({
-    auth: token
-  });
-
   try {
-    console.log("Fetching GitHub data for:", username);
+    // Fetch basic user data
+    const userData = await githubFetch(`/users/${username}`) as GitHubUser;
+    
+    // Fetch user's repositories
+    const reposData = await githubFetch(`/users/${username}/repos?sort=updated&per_page=10`) as GitHubRepo[];
+    
+    // Fetch user's organizations
+    const orgsData = await githubFetch(`/users/${username}/orgs`) as GitHubOrg[];
 
-    // Fetch basic user data and repos in parallel
-    const [userResponse, orgsResponse, { data: repositories }] = await Promise.all([
-      octokit.users.getByUsername({ username }),
-      octokit.orgs.listForUser({ username }),
-      octokit.repos.listForUser({
-        username,
-        sort: 'updated',
-        per_page: 100,
-        type: 'owner'
-      })
-    ]).catch(error => {
-      console.error("Error fetching user data:", error);
-      throw error;
-    });
+    // Calculate total stars from repositories
+    const totalStars = reposData.reduce((acc, repo) => acc + repo.stargazers_count, 0);
 
-    // Transform repositories data with proper type handling
-    const repos = repositories.map(repo => ({
+    // Transform repositories data
+    const repos = reposData.map((repo) => ({
       name: repo.name,
       description: repo.description || '',
-      stars: repo.stargazers_count || 0, // Add default value
-      forks: repo.forks_count || 0, // Add default value
+      stars: repo.stargazers_count,
+      forks: repo.forks_count,
       language: repo.language || 'Unknown',
       html_url: repo.html_url,
       isPrivate: repo.private,
-      updatedAt: repo.updated_at || new Date().toISOString() // Add default value
+      updatedAt: repo.updated_at
     }));
 
-    // Calculate total stars with proper type handling
-    const totalStars = repositories.reduce((sum, repo) => sum + (repo.stargazers_count || 0), 0);
-
     return {
-      username: userResponse.data.login,
-      avatar_url: userResponse.data.avatar_url,
-      name: userResponse.data.name || '',
-      bio: userResponse.data.bio || '',
-      public_repos: userResponse.data.public_repos,
-      followers: userResponse.data.followers,
-      following: userResponse.data.following,
+      username: userData.login,
+      avatar_url: userData.avatar_url,
+      name: userData.name || userData.login,
+      bio: userData.bio || '',
+      public_repos: userData.public_repos,
+      followers: userData.followers,
+      following: userData.following,
       total_stars: totalStars,
-      organizations: orgsResponse.data.map(org => ({
+      organizations: orgsData.map((org) => ({
         login: org.login,
         avatar_url: org.avatar_url,
       })),
-      pinnedRepos: [],
-      contributionStats: {
-        totalContributions: 0,
-        currentStreak: 0,
-        longestStreak: 0
-      },
-      repositories: repos // Now the types should match
+      repositories: repos
     };
   } catch (error) {
     console.error('Error fetching GitHub profile:', error);
-    throw new Error(
-      error instanceof Error 
-        ? `Failed to fetch GitHub profile: ${error.message}`
-        : 'Failed to fetch GitHub profile'
-    );
+    throw error;
   }
-}
-
-// Update the helper functions to return proper types
-async function fetchPinnedRepos(username: string): Promise<Array<{
-  name: string;
-  description: string;
-  stars: number;
-  forks: number;
-  language: string;
-}>> {
-  // Temporary implementation
-  return [];
-}
-
-async function fetchContributionStats(username: string): Promise<{
-  totalContributions: number;
-  currentStreak: number;
-  longestStreak: number;
-}> {
-  // Temporary implementation
-  return {
-    totalContributions: 0,
-    currentStreak: 0,
-    longestStreak: 0
-  };
 } 

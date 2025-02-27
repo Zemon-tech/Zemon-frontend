@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react";
 import { 
   Github, Star, GitFork,
-  ExternalLink, Eye, Linkedin,
-  Share2, Edit, Globe,
+  Share2, Edit, Globe, Linkedin, ExternalLink
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import PageContainer from "@/components/layout/PageContainer";
@@ -12,13 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { validateUserData } from '@/utils/auth';
-import { Card, CardContent } from "@/components/ui/card";
 import GitHubStats from "@/components/dashboard/GitHubStats";
-import GitHubRepos from "@/components/dashboard/GitHubRepos";
-import { fetchGitHubProfile } from "@/lib/github";
-import Image from 'next/image';
 
 interface User {
   _id?: string;
@@ -39,58 +33,6 @@ interface User {
   };
 }
 
-interface UserStats {
-  totalRepos: number;
-  totalStars: number;
-  totalForks: number;
-  followers: number;
-  following: number;
-  contributions: number;
-}
-
-interface GithubRepo {
-  id: number;
-  name: string;
-  description: string;
-  html_url: string;
-  stargazers_count: number;
-  forks_count: number;
-  language: string;
-  updated_at: string;
-}
-
-interface PublishedProject {
-  _id: string;
-  name: string;
-  description: string;
-  stars: number;
-  forks: number;
-  language: string;
-  github_url: string;
-  githubUrl: string;
-  updatedAt: string;
-  createdAt: string;
-  added_by: {
-    _id: string;
-    name: string;
-  };
-}
-
-interface Tool {
-  _id: string;
-  name: string;
-  description: string;
-  thumbnail: string;
-  category: string;
-  tags: string[];
-  url: string;
-  github_url?: string;
-  dev_docs?: string;
-  views: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
 function getInitials(name: string): string {
   return name
     .split(' ')
@@ -107,24 +49,23 @@ export default function UserDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  const [stats, setStats] = useState<UserStats | null>(null);
   const router = useRouter();
-  const [publishedProjects, setPublishedProjects] = useState<PublishedProject[]>([]);
-  const [userTools, setUserTools] = useState<Tool[]>([]);
   const [isCurrentUserProfile, setIsCurrentUserProfile] = useState(false);
-  const [githubRepos, setGithubRepos] = useState<GithubRepo[]>([]);
 
   // Fetch the profile user data
   useEffect(() => {
     const fetchProfileUser = async () => {
       setIsLoading(true);
+      setError(null);
       try {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/users/${username}`);
         
         if (!response.ok) {
+          const errorMsg = response.status === 404 ? "User not found" : "Failed to fetch user profile";
+          setError(errorMsg);
           toast({
             title: "Error",
-            description: response.status === 404 ? "User not found" : "Failed to fetch user profile",
+            description: errorMsg,
             variant: "destructive",
           });
           return;
@@ -133,15 +74,16 @@ export default function UserDashboardPage() {
         const data = await response.json();
         if (data.success) {
           setUser(data.data);
-          // Rest of the existing profile fetching logic...
         } else {
           throw new Error(data.message || 'Failed to fetch user profile');
         }
       } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : "An error occurred while fetching the profile";
+        setError(errorMsg);
         console.error('Error fetching user profile:', error);
         toast({
           title: "Error",
-          description: error instanceof Error ? error.message : "An error occurred while fetching the profile",
+          description: errorMsg,
           variant: "destructive",
         });
       } finally {
@@ -429,14 +371,7 @@ export default function UserDashboardPage() {
               </h2>
             </div>
             
-            <GitHubStats data={stats ? {
-              repos: stats.totalRepos,
-              followers: stats.followers,
-              following: stats.following,
-              contributions: stats.contributions,
-              stars: stats.totalStars,
-              forks: stats.totalForks
-            } : null} />
+            <GitHubStats data={null} />
           </div>
         </div>
         
@@ -454,9 +389,6 @@ export default function UserDashboardPage() {
                       <div className="flex items-center gap-2">
                         <GitFork className="w-4 h-4" />
                         <span>Zemon Repos</span>
-                        <Badge variant="outline" className="ml-1 rounded-full px-2.5 py-0.5 text-xs">
-                          {publishedProjects.length}
-                        </Badge>
                       </div>
                     </TabsTrigger>
                     <TabsTrigger 
@@ -466,9 +398,6 @@ export default function UserDashboardPage() {
                       <div className="flex items-center gap-2">
                         <Star className="w-4 h-4" />
                         <span>Zemon Tools</span>
-                        <Badge variant="outline" className="ml-1 rounded-full px-2.5 py-0.5 text-xs">
-                          {userTools.length}
-                        </Badge>
                       </div>
                     </TabsTrigger>
                     <TabsTrigger 
@@ -486,118 +415,18 @@ export default function UserDashboardPage() {
               
               {/* Repositories Tab Content */}
               <TabsContent value="repositories" className="p-6 focus-visible:outline-none focus-visible:ring-0">
-                {publishedProjects.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {publishedProjects.map((project) => (
-                      <Card key={project._id} className="overflow-hidden border border-muted/50 hover:border-primary/30 transition-colors hover:shadow-md">
-                        <CardContent className="p-5">
-                          <div className="flex items-start justify-between mb-2">
-                            <h3 className="font-medium text-lg">{project.name}</h3>
-                            {project.githubUrl && (
-                              <a 
-                                href={project.githubUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-muted-foreground hover:text-primary"
-                              >
-                                <ExternalLink className="w-4 h-4" />
-                              </a>
-                            )}
-                          </div>
-                          <p className="text-muted-foreground text-sm mb-4 line-clamp-2 min-h-[40px]">
-                            {project.description}
-                          </p>
-                          <div className="flex items-center gap-4 text-sm mt-auto">
-                            <span className="flex items-center gap-1 text-muted-foreground">
-                              <Star className="w-4 h-4 text-yellow-500" />
-                              {project.stars}
-                            </span>
-                            <span className="flex items-center gap-1 text-muted-foreground">
-                              <GitFork className="w-4 h-4 text-blue-500" />
-                              {project.forks}
-                            </span>
-                            {project.language && (
-                              <Badge variant="outline" className="ml-auto border-muted/50">
-                                {project.language}
-                              </Badge>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12 bg-muted/10 rounded-lg border border-dashed border-muted/50">
-                    <h3 className="text-lg font-medium mb-2">No repositories yet</h3>
-                    <p className="text-muted-foreground">This user hasn&apos;t published any repositories.</p>
-                  </div>
-                )}
+                <div className="text-center py-12 bg-muted/10 rounded-lg border border-dashed border-muted/50">
+                  <h3 className="text-lg font-medium mb-2">No repositories yet</h3>
+                  <p className="text-muted-foreground">This user hasn&apos;t published any repositories.</p>
+                </div>
               </TabsContent>
               
               {/* Tools Tab Content */}
               <TabsContent value="tools" className="p-6 focus-visible:outline-none focus-visible:ring-0">
-                {userTools.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {userTools.map((tool) => (
-                      <Card key={tool._id} className="overflow-hidden border border-muted/50 hover:border-primary/30 transition-colors hover:shadow-md">
-                        <CardContent className="p-5">
-                          <div className="flex items-start justify-between mb-2">
-                            <h3 className="font-medium text-lg">{tool.name}</h3>
-                            <span className="flex items-center gap-1 text-muted-foreground">
-                              <Eye className="w-4 h-4" />
-                              {tool.views}
-                            </span>
-                          </div>
-                          <p className="text-muted-foreground text-sm mb-3 line-clamp-2">
-                            {tool.description}
-                          </p>
-                          <div className="flex flex-wrap gap-2 mb-3">
-                            {tool.tags.slice(0, 3).map((tag, index) => (
-                              <Badge key={index} variant="secondary" className="border border-muted/30">{tag}</Badge>
-                            ))}
-                            {tool.tags.length > 3 && (
-                              <Badge variant="outline" className="border-muted/50">+{tool.tags.length - 3}</Badge>
-                            )}
-                          </div>
-                          <div className="flex justify-between items-center mt-4">
-                            <Badge variant="outline" className="text-xs border-muted/50">
-                              {tool.category}
-                            </Badge>
-                            {tool.thumbnail && (
-                              <div className="aspect-video relative">
-                                <Image 
-                                  src={tool.thumbnail} 
-                                  alt={tool.name} 
-                                  fill
-                                  className="object-cover"
-                                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 hover:opacity-100 transition-opacity flex items-end">
-                                  <div className="p-4 w-full">
-                                    <a 
-                                      href={tool.url} 
-                                      target="_blank" 
-                                      rel="noopener noreferrer"
-                                      className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground py-2 rounded-md hover:bg-primary/90 transition-colors"
-                                    >
-                                      <ExternalLink className="w-4 h-4" />
-                                      Visit Tool
-                                    </a>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12 bg-muted/10 rounded-lg border border-dashed border-muted/50">
-                    <h3 className="text-lg font-medium mb-2">No tools yet</h3>
-                    <p className="text-muted-foreground">This user hasn&apos;t published any tools.</p>
-                  </div>
-                )}
+                <div className="text-center py-12 bg-muted/10 rounded-lg border border-dashed border-muted/50">
+                  <h3 className="text-lg font-medium mb-2">No tools yet</h3>
+                  <p className="text-muted-foreground">This user hasn&apos;t published any tools.</p>
+                </div>
               </TabsContent>
               
               {/* Activity Tab Content */}
@@ -610,23 +439,6 @@ export default function UserDashboardPage() {
             </Tabs>
           </div>
         </div>
-        
-        {/* GitHub Repositories - Moved to appear after the Tabs component */}
-        {githubRepos.length > 0 && (
-          <div className="bg-card rounded-xl shadow-sm p-6 mb-8 border border-muted/40">
-            <h2 className="text-2xl font-bold flex items-center gap-2 mb-6">
-              <Github className="w-6 h-6" />
-              GitHub Repositories
-            </h2>
-            
-            <GitHubRepos 
-              repos={githubRepos} 
-              username={user?.github || user?.github_username || ''} 
-              limit={6}
-              showViewAll={true}
-            />
-          </div>
-        )}
       </div>
     </PageContainer>
   );

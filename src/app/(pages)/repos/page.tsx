@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
-import { Plus, GitBranch, Star, ArrowUpDown } from "lucide-react";
+import { Plus, GitBranch, Star } from "lucide-react";
 import { useRouter } from "next/navigation";
 import PageContainer from "@/components/layout/PageContainer";
 import PageHeader from "@/components/layout/PageHeader";
@@ -177,14 +176,6 @@ export default function ReposPage() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleCardClick = (repoId: string) => {
-    router.push(`/repos/${repoId}`);
-  };
-
-  const handleGitHubClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation(); // Prevent card click when clicking GitHub link
   };
 
   const handleAddProjectClick = () => {

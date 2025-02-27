@@ -1,26 +1,19 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Star, Book, Code, ArrowUpRight } from "lucide-react";
+import { ArrowLeft, Star, GitBranch, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/components/ui/use-toast";
 import PageContainer from "@/components/layout/PageContainer";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import RatingForm from "@/components/store/RatingForm";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
+import RatingForm from "@/components/store/RatingForm";
+import Image from "next/image";
 import { API_BASE_URL } from "@/lib/api";
-import Image from 'next/image';
 
 interface ToolDetails {
   _id: string;
@@ -247,7 +240,7 @@ export default function ToolDetailsPage() {
                   className="gap-2"
                 >
                   Visit Tool
-                  <ArrowUpRight className="w-4 h-4" />
+                  <ExternalLink className="w-4 h-4" />
                 </Button>
                 {tool.dev_docs && (
                   <Button 
@@ -256,7 +249,7 @@ export default function ToolDetailsPage() {
                     onClick={() => window.open(tool.dev_docs, '_blank')}
                     className="gap-2"
                   >
-                    <Book className="w-4 h-4" />
+                    <GitBranch className="w-4 h-4" />
                     Documentation
                   </Button>
                 )}
@@ -452,7 +445,7 @@ export default function ToolDetailsPage() {
                   onClick={() => window.open(tool.github_url, '_blank')}
                   className="gap-2"
                 >
-                  <Code className="w-4 h-4" />
+                  <GitBranch className="w-4 h-4" />
                   View Source Code
                 </Button>
               )}

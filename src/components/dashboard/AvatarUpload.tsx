@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Upload } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import Image from "next/image";
@@ -34,10 +33,11 @@ export default function AvatarUpload({ currentAvatar, onUpload }: AvatarUploadPr
         title: "Success",
         description: "Profile picture updated successfully",
       });
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to upload profile picture";
       toast({
         title: "Error",
-        description: "Failed to upload profile picture",
+        description: errorMessage,
         variant: "destructive",
       });
     }
